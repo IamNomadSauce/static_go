@@ -1,5 +1,8 @@
-module static-1
+module hbw
 
 go 1.22.0
 
-require github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c
+require (
+	github.com/joho/godotenv v1.5.1
+	github.com/lib/pq v1.10.9
+)

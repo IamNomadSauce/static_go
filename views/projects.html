@@ -1,0 +1,30 @@
+{{define "yield"}}
+{{template "navbar"}}
+<h1>{{len .}} Projects</h1>
+<div class="row">
+  <div class="col well">
+    {{if eq (len .) 0}}
+    <h5>No Projects</h5>
+    {{end}}
+    {{range .}}
+    <div>
+      {{.Title}}
+      {{.Description}}
+    </div>
+    {{end}}
+  </div>
+  <div class="col well">
+    <form action="/createProject" method="POST">
+      <div class="form-group">
+        <label for="title">Your Email</label>
+        <input type="text" class="form-control" id="title" placeholder="Project Title">
+      </div>
+      <div class="form-group">
+        <label for="description">message</label>
+        <input type="textarea" class="form-control" id="message" placeholder="Project Description">
+      </div>
+      <button type="submit">Create Project</button>
+    </form>
+  </div>
+</div>
+{{end}}

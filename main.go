@@ -1,89 +1,76 @@
 package main
 
 import (
+	"fmt"
+	"net/http"
   "html/template"
-  "log"
-  "net/http"
-  "path/filepath"
+	"hbw/views"
+  "hbw/db"
+  "time"
 )
 
-func main() {
-  fs := http.FileServer(http.Dir("./static"))
-  http.Handle("/static/", http.StripPrefix("/static/", fs))
+var index *views.View
+var contact *views.View
+var projects_page *views.View
 
-  http.HandleFunc("/", serveTemplate)
+type Project struct {
+	Id int64
+	Title string
+	Description string
+	Created_at time.Time
+}
 
-  log.Print("Listening on :3000")
-
-  err := http.ListenAndServe(":3000", nil)
+func GetAllProjects(w http.ResponseWriter) {
+  projects, err := db.GetProjects()
   if err != nil {
-    log.Fatal(err)
+    fmt.Println("Error getting projects from DB", err)
+  }
+  t, _ := template.ParseFiles("views/projects.html")
+  err = t.Execute(w, projects)
+  if err != nil {
+    fmt.Println("Error executing projects template with projects", err)
   }
 }
 
-func serveTemplate(w http.ResponseWriter, r *http.Request) {
-  lp := filepath.Join("templates", "layout.html")
-  fp := filepath.Join("templates", filepath.Clean(r.URL.Path))
+func main() {
+	fmt.Println("Starting Server on port 3000")
+	
+	index = views.NewView("bootstrap", "views/index.html")
+	projects_page = views.NewView("bootstrap", "views/projects.html")
+	contact = views.NewView("bootstrap", "views/contact.html")
 
-  tmpl, _ := template.ParseFiles(lp, fp)
-  tmpl.ExecuteTemplate(w, "layout", nil)
+	http.HandleFunc("/", indexHandler)
+	http.HandleFunc("/contact", contactHandler)
+	http.HandleFunc("/projects", projectsHandler)
+	http.HandleFunc("/createProject", create_projects_handler)
+	http.ListenAndServe(":3000", nil)
 }
-// package main
-//
-// import (
-//   "fmt"
-//   "html/template"
-//   "net/http"
-//   "path/filepath"
-//   "github.com/oxtoacart/bpool"
-// )
-//
-// var templates map[string]*template.Template
-// var bufpool *bpool.BufferPool
-//
-// func init() {
-//   if templates == nil {
-//     templates = make(map[string]*template.Template)
-//   }
-//
-//
-//   templatesDir := "/"
-//
-//   layouts, err := filepath.Glob(templatesDir + "templates/*.tmpl")
-//   if err != nil {
-//     fmt.Printf("Error creating layouts: %v", err)
-//   }
-//
-//   includes, err:= filepath.Glob(templatesDir + "includes/*.tmpl")
-//   if err != nil {
-//     fmt.Printf("Error with includes: %v",err)
-//   }
-//
-//   for _, layout := range layouts {
-//     files := append(includes, layout)
-//     templates[filepath.Base(layout)] = template.Must(template.ParseFiles(files...))
-//   }
-// }
-//
-// func renderTemplate(w http.ResponseWriter, name string, data map[string]interface{}) error {
-//   tmpl, ok := templates[name]
-//   if !ok {
-//     return fmt.Errorf("The template %s does not exist.", name)
-//   }
-//
-//   buf := bufpool.Get()
-//   defer bufpool.Put(buf)
-//
-//   err := tmpl.ExecuteTemplate(buf, "base.tmpl", data)
-//   if err != nil {
-//     return err
-//   }
-//   w.Header().Set("Content-Type", "text/html;")
-//   buf.WriteTo(w)
-//   return nil
-// }
-//
-// func main() {
-//   init()
-//
-// }
+
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Home Page")
+	index.Render(w, nil)
+}
+
+func projectsHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Projects Page")
+  all_projects, err := db.GetProjects()
+  if err != nil {
+    fmt.Println("Error Getting All Projects from DB", err)
+  }
+	projects_page.Render(w, all_projects)
+}
+
+func create_projects_handler(w http.ResponseWriter, r *http.Request) {
+  title := r.FormValue("title")
+  description := r.FormValue("description")
+  err := db.CreateProject(title, description)
+  if err != nil {
+    fmt.Println("create_projects_handler failed to add project to db", err)
+  }
+  http.Redirect(w, r, "/projects", http.StatusSeeOther)
+}
+
+func contactHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Contact Page")
+	contact.Render(w, nil)
+}
